@@ -1,0 +1,11 @@
+# Device {{ selected_device.a }}
+vlan {{ vlan_id_a }}
+{% for interface in interfaces %}
+interface {{ interface.name }}
+    {% if interface.untag %}
+    port hybrid untagged vlan {{ vlan_id_b }}
+    port hybrid pvid vlan {{ vlan_id_a }}
+    {% else %}
+    port hybrid tagged vlan {{ vlan_id_b }}
+    {% endif %}
+{% endfor %}

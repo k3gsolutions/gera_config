@@ -1,0 +1,82 @@
+**DEPENDENCIAS** 
+ip ip-prefix INTERNET-IPV4 index 10 permit 0.0.0.0 0 greater-equal 8 less-equal 24
+ip ip-prefix RFC5735 index 110 permit 10.0.0.0 8 greater-equal 8 less-equal 32
+ip ip-prefix RFC5735 index 115 permit 127.0.0.0 8 greater-equal 8 less-equal 32
+ip ip-prefix RFC5735 index 120 permit 169.254.0.0 16 greater-equal 16 less-equal 32
+ip ip-prefix RFC5735 index 125 permit 172.16.0.0 12 greater-equal 12 less-equal 32
+ip ip-prefix RFC5735 index 130 permit 192.0.0.0 24 greater-equal 24 less-equal 32
+ip ip-prefix RFC5735 index 135 permit 192.0.2.0 24 greater-equal 24 less-equal 32
+ip ip-prefix RFC5735 index 140 permit 192.88.99.0 24 greater-equal 24 less-equal 32
+ip ip-prefix RFC5735 index 145 permit 192.168.0.0 16 greater-equal 16 less-equal 32
+ip ip-prefix RFC5735 index 150 permit 198.18.0.0 15 greater-equal 15 less-equal 32
+ip ip-prefix RFC5735 index 155 permit 198.51.100.0 24 greater-equal 24 less-equal 32
+ip ip-prefix RFC5735 index 160 permit 203.0.113.0 24 greater-equal 24 less-equal 32
+ip ip-prefix RFC5735 index 165 permit 224.0.0.0 4 greater-equal 4 less-equal 32
+ip ip-prefix RFC5735 index 170 permit 240.0.0.0 4 greater-equal 4 less-equal 32
+ip ip-prefix RFC5735 index 175 permit 255.255.255.255 32
+
+
+
+ip ip-prefix C$CIRCUITO-$CUSTOMER_NAME-BLOCKLIST-IPV4 index 100 permit 10.0.0.0 8 greater-equal 8 less-equal 32  
+ip ip-prefix C$CIRCUITO-$CUSTOMER_NAME-PREFIX-PREFERENCE-IPV4 index 100 permit $PREFIXOSv4 $MASKv4 less-equal 24  
+ip as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-BLOCKLIST index 10 permit _65000$  
+ip as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-PREFERENCE index 10 permit ^$ASNREMOTO$  
+
+ip ipv6-prefix C$CIRCUITO-$CUSTOMER_NAME-BLOCKLIST-IPV6 index 100 permit 2001:DB8:: 32 greater-equal 32 less-equal 128  
+ip ipv6-prefix C$CIRCUITO-$CUSTOMER_NAME-PREFIX-PREFERENCE-IPV6 index 100 permit $PREFIXOSv6 $MASKv6  
+   
+   
+   
+**##POLICIES**  
+## IPv4
+route-policy AS$ASNREMOTO-$CUSTOMER_NAME-Export-V4 deny node 600  
+#  
+route-policy AS$ASNREMOTO-$CUSTOMER_NAME-Import-V4 permit node 10  
+if-match ip-prefix AS$ASNREMOTO-$CUSTOMER_NAME  
+apply local-preference 999  
+#  
+route-policy AS$ASNREMOTO-$CUSTOMER_NAME-Import-V4 deny node 600
+
+## IPv6
+route-policy AS$ASNREMOTO-$CUSTOMER_NAME-Export-V6 deny node 600  
+#  
+route-policy AS$ASNREMOTO-$CUSTOMER_NAME-Import-V6 permit node 10  
+if-match ip-prefix AS$ASNREMOTO-$CUSTOMER_NAME  
+apply local-preference 999  
+#  
+route-policy AS$ASNREMOTO-$CUSTOMER_NAME-Import-V6 deny node 600
+
+
+
+#
+
+**CRIAR PEERING BGP**  
+bgp  $ASNLOCAL  
+ peer $PEERREMOTOv4 as-number $ASNREMOTO  
+ peer $PEERREMOTOv4 description C$CIRCUITO-$CUSTOMER_NAME  
+ peer $PEERREMOTOv4 connect-interface $PEERLOCALv4 
+ peer $PEERREMOTOv4 password simple $MD5v4
+ peer $PEERREMOTOv6 as-number $ASNREMOTO  
+ peer $PEERREMOTOv6 description C$CIRCUITO-$CUSTOMER_NAME  
+ peer $PEERREMOTOv6 connect-interface $PEERLOCALv6
+ peer $PEERREMOTOv6 password simple $MD5v6
+
+ipv4-family unicast  
+ peer $PEERREMOTOv4 enable  
+ peer $PEERREMOTOv4 route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 import  
+ peer $PEERREMOTOv4 route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT export  
+   
+   
+ipv6-family unicast  
+peer $PEERREMOTOv6 enable  
+y  
+peer $PEERREMOTOv6 public-as-only force  
+peer $PEERREMOTOv6 route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 import  
+peer $PEERREMOTOv6 route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT export  
+peer $PEERREMOTOv6 next-hop-local  
+peer $PEERREMOTOv6 advertise-community  
+peer $PEERREMOTOv6 advertise-ext-community
+
+commit  
+run save  
+y

@@ -1,0 +1,831 @@
+---
+template/l2vpn/vlan
+#
+# Device {{ device_name }}
+# Cliente {{ customer_name }}
+#
+vlan {{ vlan_id_a }}
+ description {{ customer_name }}
+#
+{% for interface in interfaces %}
+interface {{ interface.name }}
+    {% if interface.untag %}
+    port hybrid untagged vlan {{ vlan_id_a }}
+    port hybrid pvid vlan {{ vlan_id_a }}
+    {% else %}
+    port hybrid tagged vlan {{ vlan_id_a }}
+    {% endif %}
+{% endfor %}
+---
+template/l2vpn/ptp
+# Cliente {{ customer_name }}
+# Configuração do lado A
+#
+# Device {{ device_name_a }}
+description {{ customer_name }}
+#
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+interface {{ interface_a.name }}
+    {% if interface_a.untag %}
+    port hybrid untagged vlan {{ vlan_id_a }}
+    port hybrid pvid vlan {{ vlan_id_a }}
+    {% else %}
+    port hybrid tagged vlan {{ vlan_id_a }}
+    {% endif %}
+interface vlanif {{ vlan_id_a }}    
+mpls l2vc 10.200.1.1 {{ vlan_id_a }} mtu 2000
+statistic enable both
+#
+#
+# Device {{ device_name_b }}
+description {{ customer_name }}
+#
+vlan {{ vlan_id_b }}
+description {{ customer_name }}
+interface {{ interface_b.name }}
+    {% if interface_b.untag %}
+    port hybrid untagged vlan {{ vlan_id_b }}
+    port hybrid pvid vlan {{ vlan_id_b }}
+    {% else %}
+    port hybrid tagged vlan {{ vlan_id_b }}
+    {% endif %}
+interface vlanif {{ vlan_id_b }}    
+mpls l2vc 10.200.1.1 {{ vlan_id_b }} mtu 2000
+statistic enable both
+---
+template/l2vpn/ptmp
+# Cliente {{ customer_name }}
+# Configuracao do dispositivo A
+# Device {{ device_name_a }}
+# Criando VSI LDP
+vsi {{ customer_name }}
+description {{ description }}
+pwsignal ldp
+vsi-id {{ vpls_id }}
+mtu 2000
+{% for loopback in site_b_loopbacks %}
+peer {{ loopback }}
+{% endfor %}
+# Configuracao de vlan L2
+vlan {{ vlan_id }}
+description {{ description }}
+# Declarando VLAN na interface
+interface {{ selected_interface_a }}
+    port hybrid tagged vlan {{ vlan_id }}
+# Configuracao de vlan cliente
+interface vlan {{ vlan_id }}
+l2 binding vsi {{ customer_name }}
+statistic enable both
+#
+#
+{% for site_b_id in selected_sites_b %}
+# Configuracao do dispositivo {{ site_options_b[site_b_id] }}
+# Device {{ device_name_b }}
+# Criando VSI LDP
+vsi {{ customer_name }}
+description {{ description }}
+pwsignal ldp
+vsi-id {{ vpls_id }}
+mtu 2000
+peer {{ loopback_a }}
+# Configuracao de vlan L2
+vlan {{ vlan_id }}
+description {{ description }}
+# Declarando VLAN na interface
+interface {{ selected_interface_b }}
+    port hybrid tagged vlan {{ vlan_id }}
+# Configuracao de vlan cliente
+interface vlan {{ vlan_id }}
+l2 binding vsi {{ customer_name }}
+statistic enable both
+#
+{% endfor %}
+---
+template/l3vpn/cl_ded
+# Cliente {{ customer_name }}
+##################
+### 01 - Versao Switch
+##################
+# Configuracao do Device {{ device_name_a }}
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+
+interface vlanif {{ vlan_id_a }}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+
+interface {{ selected_interface_a }}
+port hybrid tagged vlan {{ vlan_id_a }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+# Criar Rota estatica
+ip route-static {{rt_v4}} {{rt_mask4}} {{peer_remoto_v4}} description RT-{{customer_name}}
+ipv6 route-static {{rt_v6}} {{rt_mask6}} {{peer_remoto_v6}} description RT-{{customer_name}}
+quit
+
+
+##################
+### 02 - Versao Router
+##################
+# Configuracao do Device {{ device_name_a }}
+interface {{selected_interface_a}}.{{ vlan_id_a }}
+vlan-type dot1q {{vlan_id_a}}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+# Criar Rota estatica
+ip route-static {{rt_v4}} {{rt_mask4}} {{peer_remoto_v4}} description RT-{{customer_name}}
+ipv6 route-static {{rt_v6}} {{rt_mask6}} {{peer_remoto_v6}} description RT-{{customer_name}}
+quit
+
+
+# Dados do Cliente
+IP do Cliente: {{ peer_remoto_v4}}/{{ peer_local_mask_v4}}
+IP da Operadora: {{ peer_local_v4 }}/{{peer_local_mask_v4}}
+IPv6 do Cliente: {{ peer_remoto_v6}}/{{ peer_local_mask_v6}}
+IPv6 da Operadora: {{ peer_local_v6 }}/{{peer_local_mask_v6}}
+#
+IP Roteado ao cliente: {{rt_v4}}/{{rt_mask4}}
+IPv6 Roteado ao Cliente: {{rt_v6}}/{{rt_mask6}}
+---
+template/l3vpn/cl_trans_ip
+###################
+# CONFIGURACAO DE INTERFACE
+##################
+### 01 - Versao Switch
+##################
+# Configuracao do Device {{ device_name_a }}
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+
+interface vlanif {{ vlan_id_a }}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+
+interface {{ selected_interface_a }}
+port hybrid tagged vlan {{ vlan_id_a }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+### 02 - Versao Router
+##################
+# Configuracao do Device {{ device_name_a }}
+interface {{selected_interface_a}}.{{ vlan_id_a }}
+vlan-type dot1q {{vlan_id_a}}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+#**DEPENDENCIAS**   
+##################
+{% for prefix in default_prefix_v4 %}
+ip ip-prefix AS{{ asn_remoto }}-{{customer_name}} index {{ loop.index0 + 10 }} permit {{prefix.Prefixo}} {{prefix.Máscara}}  less-equal 24   {% endfor %}
+{% for prefix in default_prefix_v6 %}
+ip ipv6-prefix AS{{ asn_remoto }}-{{customer_name}} index {{ loop.index0 + 10 }} permit {{prefix.Prefixo}} {{prefix.Máscara}} less-equal 48 {% endfor %}
+
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V4 permit node 10  
+if-match ip-prefix AS{{ asn_remoto }}-{{customer_name}}  
+#  
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V4 deny node 600  
+#  
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V4 permit node 10  
+if-match ip-prefix AS{{ asn_remoto }}-{{customer_name}}  
+apply local-preference 999  
+#  
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V4 deny node 600
+
+##################  
+# CRIAR SESSAO BGP  
+##################
+bgp {{ asn_local }}  
+peer {{peer_remoto_v4}} as-number {{ asn_remoto }}  
+peer {{peer_remoto_v4}} description AS{{ asn_remoto }}-{{customer_name}}  
+peer {{peer_remoto_v6}} as-number {{ asn_remoto }}  
+peer {{peer_remoto_v6}} description AS{{ asn_remoto }}-{{customer_name}}  
+ipv4-family unicast  
+peer {{peer_remoto_v4}} enable  
+peer {{peer_remoto_v4}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V4 import  
+peer {{peer_remoto_v4}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V4 export
+
+ipv6-family unicast  
+peer {{peer_remoto_v6}} enable  
+y  
+peer {{peer_remoto_v6}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V6 import  
+peer {{peer_remoto_v6}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V6 export  
+commit
+---
+template/l3vpn/bgp_ups
+###################
+# CONFIGURACAO DE INTERFACE
+##################
+### 01 - Versao Switch
+##################
+# Configuracao do Device {{ device_name_a }}
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+
+interface vlanif {{ vlan_id_a }}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+
+interface {{ selected_interface_a }}
+port hybrid tagged vlan {{ vlan_id_a }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+### 02 - Versao Router
+##################
+# Configuracao do Device {{ device_name_a }}
+interface {{selected_interface_a}}.{{ vlan_id_a }}
+vlan-type dot1q {{vlan_id_a}}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+#**DEPENDENCIAS**   
+##################
+{% for prefix in default_prefix_v4 %}
+ip ip-prefix AS{{ asn_local }}-{{asn_name}} index {{ loop.index0 + 10 }} permit {{prefix.Prefixo}} {{prefix.Máscara}}  less-equal 24   {% endfor %}
+{% for prefix in default_prefix_v6 %}
+ip ipv6-prefix AS{{ asn_local }}-{{asn_name}} index {{ loop.index0 + 10 }} permit {{prefix.Prefixo}} {{prefix.Máscara}} less-equal 48 {% endfor %}
+
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V4 permit node 10  
+if-match ip-prefix AS{{ asn_local }}-{{asn_name}}  
+#  
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V4 deny node 600  
+#  
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V4 permit node 10  
+if-match ip-prefix AS{{ asn_local }}-{{asn_name}}  
+apply local-preference 999  
+#  
+route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V4 deny node 600
+
+##################  
+# CRIAR SESSAO BGP  
+##################
+bgp {{ asn_local }}  
+peer {{peer_remoto_v4}} as-number {{ asn_remoto }}  
+peer {{peer_remoto_v4}} description AS{{ asn_remoto }}-{{customer_name}}  
+peer {{peer_remoto_v6}} as-number {{ asn_remoto }}  
+peer {{peer_remoto_v6}} description AS{{ asn_remoto }}-{{customer_name}}  
+ipv4-family unicast  
+peer {{peer_remoto_v4}} enable  
+peer {{peer_remoto_v4}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V4 import  
+peer {{peer_remoto_v4}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V4 export
+
+ipv6-family unicast  
+peer {{peer_remoto_v6}} enable  
+y  
+peer {{peer_remoto_v6}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Import-V6 import  
+peer {{peer_remoto_v6}} route-policy AS{{ asn_remoto }}-{{customer_name}}-Export-V6 export  
+commit
+---
+template/l3vpn/bgp_ups_comm
+###################
+# CONFIGURACAO DE INTERFACE
+##################
+### 01 - Versao Switch
+##################
+# Configuracao do Device {{ device_name_a }}
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+
+interface vlanif {{ vlan_id_a }}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+
+interface {{ selected_interface_a }}
+port hybrid tagged vlan {{ vlan_id_a }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+### 02 - Versao Router
+##################
+# Configuracao do Device {{ device_name_a }}
+interface {{selected_interface_a}}.{{ vlan_id_a }}
+vlan-type dot1q {{vlan_id_a}}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+## DEPENDENCIAS
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-RECEIVED permit 64777:5{{ circuito }}00  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-BLACKHOLE permit 64777:5{{ circuito }}66  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-BLOCK permit 64777:5{{ circuito }}67  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P1 permit 64777:5{{ circuito }}01  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P2 permit 64777:5{{ circuito }}02  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P3 permit 64777:5{{ circuito }}03  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P4 permit 64777:5{{ circuito }}04  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P5 permit 64777:5{{ circuito }}05  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-NOEXPORT permit 64777:5{{ circuito }}08  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-DEFAULT permit 64777:5{{ circuito }}09  
+   
+ip ip-prefix C{{ circuito }}-{{ customer_name }}-BLOCKLIST-IPV4 index 100 permit 10.0.0.0 8 greater-equal 8 less-equal 32
+{% for prefix in default_prefix_v4 %}  
+ip ip-prefix C{{ circuito }}-{{ customer_name }}-PREFIX-PREFERENCE-IPV4 index 100 permit {{ prefix.Prefixo }} {{ prefix.Máscara }} less-equal 24   {% endfor %}
+ip as-path-filter C{{ circuito }}-{{ customer_name }}-AS-BLOCKLIST index 10 permit _65000$  
+ip as-path-filter C{{ circuito }}-{{ customer_name }}-AS-PREFERENCE index 10 permit ^{{ asn_remoto }}$  
+   
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-BLACKHOLE index 10 permit 64777:5{{ circuito }}66  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-BLOCK index 10 permit 64777:5{{ circuito }}67  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-DEFAULT index 10 permit 64777:5{{ circuito }}09  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-NOEXPORT index 10 permit 64777:5{{ circuito }}08  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P1 index 10 permit 64777:5{{ circuito }}01  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P2 index 10 permit 64777:5{{ circuito }}02  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P3 index 10 permit 64777:5{{ circuito }}03  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P4 index 10 permit 64777:5{{ circuito }}04  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-EXPORT-P5 index 10 permit 64777:5{{ circuito }}05  
+ip community-filter basic C{{ circuito }}-{{ customer_name }}-RECEIVED index 10 permit 64777:5{{ circuito }}00
+
+ip ipv6-prefix C{{ circuito }}-{{ customer_name }}-BLOCKLIST-IPV6 index 100 permit 2001:DB8:: 32 greater-equal 32 less-equal 128  
+ip ipv6-prefix C{{ circuito }}-{{ customer_name }}-PREFIX-PREFERENCE-IPV6 index 100 permit {{ default_prefix_v6 }} {{ default_mask_v6 }}  
+   
+##POLICIES 
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT deny node 1001  
+ if-match community-filter FULL-ROUTE-ALL  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT deny node 1010  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-BLOCK  
+#            
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 1011  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-BLACKHOLE  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2001  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-P1  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2002  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-P2  
+ apply as-path {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2003  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-P3  
+ apply as-path {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2004  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-P4  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2005  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-P5  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2008  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-NOEXPORT  
+ apply community no-export  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2009  
+ if-match community-filter C{{ circuito }}-{{ customer_name }}-EXPORT-DEFAULT  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2011  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P1  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2012  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P2  
+ apply as-path {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2013  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P3  
+ apply as-path {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2014  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P4  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2015  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P5  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2018  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-NOEXPORT  
+ apply community no-export  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2019  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-DEFAULT  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2021  
+ if-match community-filter GLOBAL-EXPORT-ALL-P1  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2022  
+ if-match community-filter GLOBAL-EXPORT-ALL-P2  
+ apply as-path {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2023  
+ if-match community-filter GLOBAL-EXPORT-ALL-P3  
+ apply as-path {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2024  
+ if-match community-filter GLOBAL-EXPORT-ALL-P4  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2025  
+ if-match community-filter GLOBAL-EXPORT-ALL-P5  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2028  
+ if-match community-filter GLOBAL-EXPORT-ALL-NOEXPORT  
+ apply community no-export  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT permit node 2029  
+ if-match community-filter GLOBAL-EXPORT-ALL-DEFAULT  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-EXPORT deny node 9999  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 deny node 1000  
+ if-match ip-prefix RFC5735  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 deny node 1001  
+ if-match ip-prefix C{{ circuito }}-{{ customer_name }}-BLOCKLIST-IPV4  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 deny node 1002  
+ if-match as-path-filter C{{ circuito }}-{{ customer_name }}-AS-BLOCKLIST  
+#                
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 permit node 2001  
+ if-match ip-prefix C{{ circuito }}-{{ customer_name }}-PREFIX-PREFERENCE-IPV4  
+ apply local-preference 201  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 permit node 200  
+ if-match as-path-filter C{{ circuito }}-{{ customer_name }}-AS-PREFERENCE  
+ apply local-preference 205  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 permit node 3010  
+ if-match ip-prefix INTERNET-IPV4  
+ apply local-preference 100  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 permit node 3011  
+ if-match ip-prefix GATEWAY-IPV4  
+ apply local-preference 101  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 deny node 9999  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 deny node 1000  
+ if-match ipv6 address prefix-list RFC3849  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 deny node 1001  
+ if-match ipv6 address prefix-list C{{ circuito }}-{{ customer_name }}-BLOCKLIST-IPV6  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 deny node 1002  
+ if-match as-path-filter C{{ circuito }}-{{ customer_name }}-AS-BLOCKLIST  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 permit node 2001  
+ if-match ipv6 address prefix-list C{{ circuito }}-{{ customer_name }}-PREFIX-PREFERENCE-IPV6  
+ apply local-preference 201  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 permit node 2002  
+ if-match as-path-filter C{{ circuito }}-{{ customer_name }}-AS-PREFERENCE  
+ apply local-preference 202  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 permit node 3010  
+ if-match ipv6 address prefix-list INTERNET-IPV6  
+ apply local-preference 100  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#                
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 permit node 3011  
+ if-match ipv6 address prefix-list GATEWAY-IPV6  
+ apply local-preference 101  
+ apply community 64777:5{{ circuito }}00 64777:20000 64777:20010  
+#  
+route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 deny node 9999  
+#
+
+**CRIAR PEERING BGP**  
+bgp  {{ asn_local }}  
+ peer {{ peer_remoto_v4 }} as-number {{ asn_remoto }}  
+ peer {{ peer_remoto_v4 }} description {{ asn_name }}
+ peer {{ peer_remoto_v4 }} connect-interface {{ peer_local_v4 }}
+ peer {{ peer_remoto_v4 }} password simple {{ md5_v4 }}
+ peer {{ peer_remoto_v6 }} as-number {{ asn_remoto }}  
+ peer {{ peer_remoto_v6 }} description {{ asn_name }}
+ peer {{ peer_remoto_v6 }} description C{{ circuito }}-{{ customer_name }}  
+ peer {{ peer_remoto_v6 }} connect-interface {{ peer_local_v6 }}
+ peer {{ peer_remoto_v6 }} password simple {{ md5_v6}}   
+
+ipv4-family unicast  
+ peer {{ peer_remoto_v4 }} enable  
+ peer {{ peer_remoto_v4 }} route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV4 import  
+ peer {{ peer_remoto_v4 }} route-policy C{{ circuito }}-{{ customer_name }}-EXPORT export  
+   
+   
+ipv6-family unicast  
+peer {{ peer_remoto_v6 }} enable  
+y  
+peer {{ peer_remoto_v6 }} public-as-only force  
+peer {{ peer_remoto_v6 }} route-policy C{{ circuito }}-{{ customer_name }}-IMPORT-IPV6 import  
+peer {{ peer_remoto_v6 }} route-policy C{{ circuito }}-{{ customer_name }}-EXPORT export  
+peer {{ peer_remoto_v6 }} next-hop-local  
+peer {{ peer_remoto_v6 }} advertise-community  
+peer {{ peer_remoto_v6 }} advertise-ext-community
+
+commit  
+run save  
+y
+
+---
+template/l3vpn/peering_cdn_comm
+###################
+# CONFIGURACAO DE INTERFACE
+##################
+### 01 - Versao Switch
+##################
+# Configuracao do Device {{ device_name_a }}
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+
+interface vlanif {{ vlan_id_a }}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+
+interface {{ selected_interface_a }}
+port hybrid tagged vlan {{ vlan_id_a }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+### 02 - Versao Router
+##################
+# Configuracao do Device {{ device_name_a }}
+interface {{selected_interface_a}}.{{ vlan_id_a }}
+vlan-type dot1q {{vlan_id_a}}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+## DEPENDENCIAS**
+
+!# ALL-CDN >> Estático  
+ip community-filter basic EXPORT-ALL-CDN permit 64777:20061  
+ip community-filter basic EXPORT-ALL-CDN-P1 permit 64777:60021  
+ip community-filter basic EXPORT-ALL-CDN-P2 permit 64777:60022  
+ip community-filter basic EXPORT-ALL-CDN-P3 permit 64777:60023  
+ip community-filter basic EXPORT-ALL-CDN-P4 permit 64777:60024  
+ip community-filter basic EXPORT-ALL-CDN-P5 permit 64777:60025
+
+!## EXCLUSIVE-CDN  
+ip community-filter basic C{{ circuito }}-RECEIVED permit 64777:10094  
+ip community-filter basic C{{ circuito }}-EXPORT-P1 permit 64777:5{{ circuito }}01  
+ip community-filter basic C{{ circuito }}-EXPORT-P2 permit 64777:5{{ circuito }}02  
+ip community-filter basic C{{ circuito }}-EXPORT-P3 permit 64777:5{{ circuito }}03  
+ip community-filter basic C{{ circuito }}-EXPORT-P4 permit 64777:5{{ circuito }}04  
+ip community-filter basic C{{ circuito }}-EXPORT-P5 permit 64777:5{{ circuito }}05  
+ip community-filter basic C{{ circuito }}-EXPORT-BLOCK permit 64777:5{{ circuito }}67
+   
+##POLICIES**  
+route-policy C{{ circuito }}-EXPORT deny node 1010  
+ if-match community-filter C{{ circuito }}-EXPORT-BLOCK  
+#                
+route-policy C{{ circuito }}-EXPORT permit node 2001  
+ if-match community-filter C{{ circuito }}-EXPORT-P1  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2002  
+ if-match community-filter C{{ circuito }}-EXPORT-P2  
+ apply as-path {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2003  
+ if-match community-filter C{{ circuito }}-EXPORT-P3  
+ apply as-path {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2004  
+ if-match community-filter C{{ circuito }}-EXPORT-P4  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2005  
+ if-match community-filter C{{ circuito }}-EXPORT-P5  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2011  
+ if-match community-filter EXPORT-ALL-CDN-P1  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2012  
+ if-match community-filter EXPORT-ALL-CDN-P2  
+ apply as-path {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2013  
+ if-match community-filter EXPORT-ALL-CDN-P3  
+ apply as-path {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2014  
+ if-match community-filter EXPORT-ALL-CDN-P4  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT permit node 2015  
+ if-match community-filter EXPORT-ALL-CDN-P5  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C{{ circuito }}-EXPORT deny node 9999  
+#  
+route-policy C{{ circuito }}-IMPORT-IPV4 permit node 10  
+apply community 64777:10094  
+route-policy C{{ circuito }}-IMPORT-IPV6 deny node 9999  
+#  
+commit  
+#
+
+**CRIAR PEERING BGP**
+
+bgp  {{ asn_local }}  
+ peer {{ peer_remoto_v4 }} as-number {{ asn_remoto }}  
+ peer {{ peer_remoto_v4 }} connect-interface {{ peer_local_v4 }}    
+ peer {{ peer_remoto_v6 }} as-number {{ asn_remoto }}  
+ peer {{ peer_remoto_v6 }} description C{{ circuito }}-{{ asn_name }}  
+ peer {{ peer_remoto_v6 }} connect-interface {{ peer_local_v6 }}
+
+ipv4-family unicast  
+ peer {{ peer_remoto_v4 }} enable  
+ peer {{ peer_remoto_v4 }} route-policy C{{ circuito }}-IMPORT-IPV4 import  
+ peer {{ peer_remoto_v4 }} route-policy C{{ circuito }}-EXPORT export  
+   
+   
+ipv6-family unicast  
+peer {{ peer_remoto_v6 }} enable  
+y  
+peer {{ peer_remoto_v6 }} public-as-only force  
+peer {{ peer_remoto_v6 }} route-policy C{{ circuito }}-IMPORT-IPV6 import  
+peer {{ peer_remoto_v6 }} route-policy C{{ circuito }}-EXPORT export  
+peer {{ peer_remoto_v6 }} next-hop-local  
+peer {{ peer_remoto_v6 }} advertise-community  
+peer {{ peer_remoto_v6 }} advertise-ext-community
+
+commit  
+run save  
+y
+#########################
+## PEERING BGP COM VRF  
+#########################
+bgp  {{ asn_local }}
+
+ipv4-family vpn-instance $VRF  
+peer {{ peer_remoto_v4 }} as-number {{ asn_remoto }}  
+peer {{ peer_remoto_v4 }} route-policy C{{ circuito }}-IMPORT-IPV4 import  
+peer {{ peer_remoto_v4 }} route-policy C{{ circuito }}-EXPORT export  
+   
+ipv6-family vpn-instance $VRF  
+peer {{ peer_remoto_v6 }} as-number {{ asn_remoto }}  
+peer {{ peer_remoto_v6 }} description C{{ circuito }}  
+peer {{ peer_remoto_v6 }} public-as-only force  
+peer {{ peer_remoto_v6 }} route-policy C{{ circuito }}-IMPORT-IPV6 import  
+peer {{ peer_remoto_v6 }} route-policy C{{ circuito }}-EXPORT export  
+peer {{ peer_remoto_v6 }} next-hop-local  
+peer {{ peer_remoto_v6 }} advertise-community  
+peer {{ peer_remoto_v6 }} advertise-ext-community
+
+commit  
+run save  
+y
+
+---
+template/l3vpn/bgp_ixbr_comm
+###################
+# CONFIGURACAO DE INTERFACE
+##################
+### 01 - Versao Switch
+##################
+# Configuracao do Device {{ device_name_a }}
+vlan {{ vlan_id_a }}
+description {{ customer_name }}
+
+interface vlanif {{ vlan_id_a }}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+
+interface {{ selected_interface_a }}
+port hybrid tagged vlan {{ vlan_id_a }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+##################
+### 02 - Versao Router
+##################
+# Configuracao do Device {{ device_name_a }}
+interface {{selected_interface_a}}.{{ vlan_id_a }}
+vlan-type dot1q {{vlan_id_a}}
+description {{ customer_name }}
+ip address {{ peer_local_v4 }} {{ peer_local_mask_v4 }}
+ipv6 enable
+ipv6 address {{ peer_local_v6 }} {{ peer_local_mask_v6}}
+statistic enable
+
+## DEPENDENCIAS**
+
+!# ALL-IX >> Estático  
+ip community-filter basic C-IXBR-RECEIVED permit 64777:20050  
+ip community-filter basic C-IXBR-EXPORT-P1 permit 64777:60011  
+ip community-filter basic C-IXBR-EXPORT-P2 permit 64777:60012  
+ip community-filter basic C-IXBR-EXPORT-P3 permit 64777:60013  
+ip community-filter basic C-IXBR-EXPORT-P4 permit 64777:60014  
+ip community-filter basic C-IXBR-EXPORT-P5 permit 64777:60015  
+ip community-filter basic C-IXBR-EXPORT-BLOCK permit 64777:60067
+   
+##POLICIES**  
+route-policy C-IXBR-EXPORT deny node 1010  
+ if-match community-filter C-IXBR-EXPORT-BLOCK  
+#                
+route-policy C-IXBR-EXPORT permit node 2001  
+ if-match community-filter C-IXBR-EXPORT-P1  
+#  
+route-policy C-IXBR-EXPORT permit node 2002  
+ if-match community-filter C-IXBR-EXPORT-P2  
+ apply as-path {{ asn_local }} additive  
+#  
+route-policy C-IXBR-EXPORT permit node 2003  
+ if-match community-filter C-IXBR-EXPORT-P3  
+ apply as-path {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C-IXBR-EXPORT permit node 2004  
+ if-match community-filter C-IXBR-EXPORT-P4  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C-IXBR-EXPORT permit node 2005  
+ if-match community-filter C-IXBR-EXPORT-P5  
+ apply as-path {{ asn_local }} {{ asn_local }} {{ asn_local }} {{ asn_local }} additive  
+#  
+route-policy C-IXBR-EXPORT deny node 9999  
+#  
+route-policy C-IXBR-IMPORT-IPV4 permit node 10  
+apply community 64777:20050  
+route-policy C-IXBR-IMPORT-IPV6 deny node 9999  
+#  
+commit  
+#
+
+**CRIAR PEERING BGP**
+
+bgp  {{ asn_local }}  
+ peer {{ peer_remoto_v4 }} as-number {{ asn_remoto }}  
+ peer {{ peer_remoto_v4 }} connect-interface {{ peer_local_v4 }}    
+ peer {{ peer_remoto_v6 }} as-number {{ asn_remoto }}  
+ peer {{ peer_remoto_v6 }} description C-IXBR-{{ asn_name }}  
+ peer {{ peer_remoto_v6 }} connect-interface {{ peer_local_v6 }}
+
+ipv4-family unicast  
+ peer {{ peer_remoto_v4 }} enable  
+ peer {{ peer_remoto_v4 }} route-policy C-IXBR-IMPORT-IPV4 import  
+ peer {{ peer_remoto_v4 }} route-policy C-IXBR-EXPORT export  
+   
+   
+ipv6-family unicast  
+peer {{ peer_remoto_v6 }} enable  
+y  
+peer {{ peer_remoto_v6 }} public-as-only force  
+peer {{ peer_remoto_v6 }} route-policy C-IXBR-IMPORT-IPV6 import  
+peer {{ peer_remoto_v6 }} route-policy C-IXBR-EXPORT export  
+peer {{ peer_remoto_v6 }} next-hop-local  
+peer {{ peer_remoto_v6 }} advertise-community  
+peer {{ peer_remoto_v6 }} advertise-ext-community
+
+commit  
+run save  
+y
+
+#########################
+## PEERING BGP COM VRF  
+#########################
+bgp  {{ asn_local }}
+
+ipv4-family vpn-instance $VRF  
+peer {{ peer_remoto_v4 }} as-number {{ asn_remoto }}  
+peer {{ peer_remoto_v4 }} route-policy C-IXBR-IMPORT-IPV4 import  
+peer {{ peer_remoto_v4 }} route-policy C-IXBR-EXPORT export  
+   
+ipv6-family vpn-instance $VRF  
+peer {{ peer_remoto_v6 }} as-number {{ asn_remoto }}  
+peer {{ peer_remoto_v6 }} description C-IXBR  
+peer {{ peer_remoto_v6 }} public-as-only force  
+peer {{ peer_remoto_v6 }} route-policy C-IXBR-IMPORT-IPV6 import  
+peer {{ peer_remoto_v6 }} route-policy C-IXBR-EXPORT export  
+peer {{ peer_remoto_v6 }} next-hop-local  
+peer {{ peer_remoto_v6 }} advertise-community  
+peer {{ peer_remoto_v6 }} advertise-ext-community
+
+commit  
+run save  
+y
+---

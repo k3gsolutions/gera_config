@@ -1,0 +1,217 @@
+**DEPENDENCIAS**   
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-RECEIVED permit 64777:5$CIRCUITO00  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-BLACKHOLE permit 64777:5$CIRCUITO66  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-BLOCK permit 64777:5$CIRCUITO67  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P1 permit 64777:5$CIRCUITO01  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P2 permit 64777:5$CIRCUITO02  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P3 permit 64777:5$CIRCUITO03  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P4 permit 64777:5$CIRCUITO04  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P5 permit 64777:5$CIRCUITO05  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-NOEXPORT permit 64777:5$CIRCUITO08  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-DEFAULT permit 64777:5$CIRCUITO09  
+   
+ip ip-prefix C$CIRCUITO-$CUSTOMER_NAME-BLOCKLIST-IPV4 index 100 permit 10.0.0.0 8 greater-equal 8 less-equal 32  
+ip ip-prefix C$CIRCUITO-$CUSTOMER_NAME-PREFIX-PREFERENCE-IPV4 index 100 permit $PREFIXOSv4 $MASKv4 less-equal 24  
+ip as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-BLOCKLIST index 10 permit _65000$  
+ip as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-PREFERENCE index 10 permit ^$ASNREMOTO$  
+   
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-BLACKHOLE index 10 permit 64777:5$CIRCUITO66  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-BLOCK index 10 permit 64777:5$CIRCUITO67  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-DEFAULT index 10 permit 64777:5$CIRCUITO09  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-NOEXPORT index 10 permit 64777:5$CIRCUITO08  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P1 index 10 permit 64777:5$CIRCUITO01  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P2 index 10 permit 64777:5$CIRCUITO02  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P3 index 10 permit 64777:5$CIRCUITO03  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P4 index 10 permit 64777:5$CIRCUITO04  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P5 index 10 permit 64777:5$CIRCUITO05  
+ip community-filter basic C$CIRCUITO-$CUSTOMER_NAME-RECEIVED index 10 permit 64777:5$CIRCUITO00
+
+ip ipv6-prefix C$CIRCUITO-$CUSTOMER_NAME-BLOCKLIST-IPV6 index 100 permit 2001:DB8:: 32 greater-equal 32 less-equal 128  
+ip ipv6-prefix C$CIRCUITO-$CUSTOMER_NAME-PREFIX-PREFERENCE-IPV6 index 100 permit $PREFIXOSv6 $MASKv6  
+   
+   
+   
+**##POLICIES**  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT deny node 1001  
+ if-match community-filter FULL-ROUTE-ALL  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT deny node 1010  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-BLOCK  
+#                
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 1011  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-BLACKHOLE  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2001  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P1  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2002  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P2  
+ apply as-path $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2003  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P3  
+ apply as-path $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2004  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P4  
+ apply as-path $ASNLOCAL $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2005  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-P5  
+ apply as-path $ASNLOCAL $ASNLOCAL $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2008  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-NOEXPORT  
+ apply community no-export  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2009  
+ if-match community-filter C$CIRCUITO-$CUSTOMER_NAME-EXPORT-DEFAULT  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2011  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P1  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2012  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P2  
+ apply as-path $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2013  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P3  
+ apply as-path $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2014  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P4  
+ apply as-path $ASNLOCAL $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2015  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P5  
+ apply as-path $ASNLOCAL $ASNLOCAL $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2018  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-NOEXPORT  
+ apply community no-export  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2019  
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-DEFAULT  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2021  
+ if-match community-filter GLOBAL-EXPORT-ALL-P1  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2022  
+ if-match community-filter GLOBAL-EXPORT-ALL-P2  
+ apply as-path $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2023  
+ if-match community-filter GLOBAL-EXPORT-ALL-P3  
+ apply as-path $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2024  
+ if-match community-filter GLOBAL-EXPORT-ALL-P4  
+ apply as-path $ASNLOCAL $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2025  
+ if-match community-filter GLOBAL-EXPORT-ALL-P5  
+ apply as-path $ASNLOCAL $ASNLOCAL $ASNLOCAL $ASNLOCAL additive  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2028  
+ if-match community-filter GLOBAL-EXPORT-ALL-NOEXPORT  
+ apply community no-export  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT permit node 2029  
+ if-match community-filter GLOBAL-EXPORT-ALL-DEFAULT  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT deny node 9999  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 deny node 1000  
+ if-match ip-prefix RFC5735  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 deny node 1001  
+ if-match ip-prefix C$CIRCUITO-$CUSTOMER_NAME-BLOCKLIST-IPV4  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 deny node 1002  
+ if-match as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-BLOCKLIST  
+#                
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 permit node 2001  
+ if-match ip-prefix C$CIRCUITO-$CUSTOMER_NAME-PREFIX-PREFERENCE-IPV4  
+ apply local-preference 201  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 permit node 200  
+ if-match as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-PREFERENCE  
+ apply local-preference 205  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 permit node 3010  
+ if-match ip-prefix INTERNET-IPV4  
+ apply local-preference 100  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 permit node 3011  
+ if-match ip-prefix GATEWAY-IPV4  
+ apply local-preference 101  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 deny node 9999  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 deny node 1000  
+ if-match ipv6 address prefix-list RFC3849  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 deny node 1001  
+ if-match ipv6 address prefix-list C$CIRCUITO-$CUSTOMER_NAME-BLOCKLIST-IPV6  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 deny node 1002  
+ if-match as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-BLOCKLIST  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 permit node 2001  
+ if-match ipv6 address prefix-list C$CIRCUITO-$CUSTOMER_NAME-PREFIX-PREFERENCE-IPV6  
+ apply local-preference 201  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 permit node 2002  
+ if-match as-path-filter C$CIRCUITO-$CUSTOMER_NAME-AS-PREFERENCE  
+ apply local-preference 202  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 permit node 3010  
+ if-match ipv6 address prefix-list INTERNET-IPV6  
+ apply local-preference 100  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#                
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 permit node 3011  
+ if-match ipv6 address prefix-list GATEWAY-IPV6  
+ apply local-preference 101  
+ apply community 64777:5$CIRCUITO00 64777:20000 64777:20010  
+#  
+route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 deny node 9999  
+#
+
+**CRIAR PEERING BGP**  
+bgp  $ASNLOCAL  
+ peer $PEERREMOTOv4 as-number $ASNREMOTO  
+ peer $PEERREMOTOv4 description $ASNNAME
+ peer $PEERREMOTOv4 connect-interface $PEERLOCALv4
+ peer $PEERREMOTOv4 password simple $MD5v4
+ peer $PEERREMOTOv6 as-number $ASNREMOTO  
+ peer $PEERREMOTOv6 description $ASNNAME
+ peer $PEERREMOTOv6 description C$CIRCUITO-$CUSTOMER_NAME  
+ peer $PEERREMOTOv6 connect-interface $PEERLOCALv6
+ peer $PEERREMOTOv6 password simple $MD5v6   
+
+ipv4-family unicast  
+ peer $PEERREMOTOv4 enable  
+ peer $PEERREMOTOv4 route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV4 import  
+ peer $PEERREMOTOv4 route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT export  
+   
+   
+ipv6-family unicast  
+peer $PEERREMOTOv6 enable  
+y  
+peer $PEERREMOTOv6 public-as-only force  
+peer $PEERREMOTOv6 route-policy C$CIRCUITO-$CUSTOMER_NAME-IMPORT-IPV6 import  
+peer $PEERREMOTOv6 route-policy C$CIRCUITO-$CUSTOMER_NAME-EXPORT export  
+peer $PEERREMOTOv6 next-hop-local  
+peer $PEERREMOTOv6 advertise-community  
+peer $PEERREMOTOv6 advertise-ext-community
+
+commit  
+run save  
+y

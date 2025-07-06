@@ -1,0 +1,22 @@
+[project]
+name = "dash-bgp"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "keslleykssantos",email = "keslley@k3gsolutions.com.br"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests (>=2.32.3,<3.0.0)",
+    "streamlit (>=1.42.2,<2.0.0)",
+    "streamlit-tree-select (>=0.0.5,<0.0.6)"
+]
+
+[tool.poetry]
+packages = [{include = "dash_bgp", from = "src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
